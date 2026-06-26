@@ -1,36 +1,42 @@
 # Agent Instructions
 
-- For future messages received in this project conversation, summarize and organize the content into the project directory when possible, then reply with `收到`.
-- This applies only to messages explicitly sent in the current conversation; do not monitor or record external chats in the background.
-- If the filesystem is not writable, explain that the content cannot be written.
+- For future messages received in this project conversation, process only the content explicitly sent by the user in this conversation; do not monitor or record external chats in the background.
+- Unless the user explicitly asks for details, explanations, analysis output, or another response format, reply only with `收到` after processing is complete.
+- If the filesystem is not writable or a link cannot be fetched, record the failure reason when possible. If a normal reply is still appropriate, reply with `收到`.
 
 ## Document Intake Workflow
 
-When the user sends a webpage link, article text, image, or other document-like content:
+When the user sends a link:
 
-1. Store the content or a useful local summary under a categorized folder in the project directory.
-2. Use clear top-level folders by content type, creating them when needed:
-   - `documents/webpages/` for webpage links and webpage summaries.
-   - `documents/articles/` for pasted articles or long-form text.
-   - `documents/images/` for images or image descriptions.
-   - `documents/files/` for other uploaded or referenced files.
-3. Name stored items with a stable, sortable pattern:
-   - `YYYY-MM-DD_sender_short-description.md` for text-based records.
-   - `YYYY-MM-DD_sender_short-description.ext` for binary files when an actual file is available.
-4. Keep a root-level document management table in `document-library.md`.
-5. Create `document-library.md` if it does not exist.
-6. For each intake item, append or update one row in `document-library.md` with these metadata fields:
+1. Identify the article source by the URL domain.
+   - Examples: `mp.weixin.qq.com` is WeChat Official Account; `zhuanlan.zhihu.com` is Zhihu Column; `36kr.com` is 36Kr; `juejin.cn` is Juejin; `sspai.com` is SSPAI.
+   - For unknown domains, use the registrable domain as the source name.
+2. Fetch the page content when possible.
+3. Extract and save the article content as Markdown, including at least:
+   - Title
+   - Source domain and inferred source name
+   - Original URL
+   - Intake time
+   - Main article body or the best available readable content
+   - Notes about fetch or extraction limitations, if any
+4. Save Markdown files under a source-specific folder:
+   - `documents/<source-domain>/YYYY-MM-DD_short-title.md`
+   - Normalize the domain and filename to lowercase ASCII where practical.
+5. Keep a root-level document management table in `document-library.md`.
+6. Create `document-library.md` if it does not exist.
+7. For each saved article, append or update one row in `document-library.md` with these metadata fields:
    - Record ID
    - Sender
    - Intake time
+   - Source domain
+   - Source name
    - Document type
    - Title or short description
-   - Source URL or source note
+   - Original URL
    - Local storage path
    - Tags
    - Summary status
    - Notes
-7. If sender, title, or other metadata is not explicit, infer conservatively and mark unknown values as `Unknown`.
-8. Preserve the original source link when the user sends a URL. If browsing is not available or not needed, record the URL and summarize only what the user provided.
-9. When the user asks to query content or produce a daily document summary report, use `document-library.md` as the primary index and read the linked local records as needed.
-10. After successfully saving and indexing the received content, reply only with `收到` unless the user asks for details.
+8. If title, author, or other metadata is unavailable, infer conservatively and mark unknown values as `Unknown`.
+9. When the user sends pasted article text, images, or other document-like content instead of a link, store it under an appropriate `documents/<content-type>/` folder and index it in `document-library.md`.
+10. When the user asks to query content or produce a daily document summary report, use `document-library.md` as the primary index and read the linked local records as needed.
