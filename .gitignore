@@ -1,5 +1,7 @@
 # Local agent/runtime metadata
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 .codex/
 
 # User-generated usage records

@@ -1,3 +1,8 @@
+---
+name: document-intake
+description: Always use this project-specific skill for every user message in this project. It governs how to process explicit user-sent content, including article links, pasted article text, images, other document-like content, document-library queries, and daily document summary requests.
+---
+
 # Agent Instructions
 
 - For future messages received in this project conversation, process only the content explicitly sent by the user in this conversation; do not monitor or record external chats in the background.
