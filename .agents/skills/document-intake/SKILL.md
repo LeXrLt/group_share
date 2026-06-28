@@ -5,12 +5,13 @@ description: Mandatory project skill for every user message in this project, wit
 
 # Agent Instructions
 
-- Version: `1.0.0`
+- Version: `1.0.1`
 - Versioning policy: use Semantic Versioning for this skill. Increment PATCH for clarifications or non-behavioral wording, MINOR for backward-compatible workflow additions, and MAJOR for breaking changes to intake, storage, wiki, or reply behavior.
 - When changing this skill, update the version in this section and add a concise entry under `## Version History`.
 - Highest behavior rule: remain silent unless the user explicitly @mentions the bot or is chatting with the bot in a private/direct conversation. This rule overrides all other reply instructions in this skill and must never be violated.
 - In group chats where the bot is not @mentioned, process and save eligible content normally, but send no reply after processing, including no success notice, no `收到`, no failure notice, no summary, and no task-completion notification.
 - In private/direct conversations or @mentioned group messages, reply only when a reply is needed by the user's request or by the link/file summary rules below.
+- User-facing replies should focus on the requested answer or concise content summary. Do not include routine intake bookkeeping such as local storage paths, `document-library.md` updates, wiki source paths, or "已入库/已保存" status unless the user explicitly asks where something was saved, asks for audit details, or a storage/fetch failure is the main result.
 - This skill is mandatory for every user message in this project. Do not choose another workflow instead of this skill; apply this skill first, then perform any additional requested task if needed.
 - For future messages received in this project conversation, process only the content explicitly sent by the user in this conversation; do not monitor or record external chats in the background.
 - Treat one user message as an intake batch. Process every link and every standalone text segment in that message before replying.
@@ -170,4 +171,5 @@ When linting the knowledge base:
 
 ## Version History
 
+- `1.0.1` - Clarified user-facing reply style: omit routine storage, index, and wiki bookkeeping from normal summaries unless explicitly requested or needed for failure reporting.
 - `1.0.0` - Baseline version for mandatory message intake, reply constraints, raw document storage, local indexing, file/image handling, and maintained wiki workflows.
