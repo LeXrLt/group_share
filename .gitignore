@@ -2,13 +2,19 @@
 .agents/*
 !.agents/skills/
 !.agents/skills/**
+.agents/skills/lark-*/
+!.agents/skills/document-intake/
+!.agents/skills/document-intake/**
+skills-lock.json
 .codex/
+.cc-connect/
 
-# User-generated usage records
+# Raw intake records and local usage logs
 vchat-summary.md
 chat-summary.md
 document-library.md
 documents/
+wiki/
 
 # OS and editor files
 .DS_Store
