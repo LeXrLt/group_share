@@ -5,14 +5,15 @@ description: Mandatory project skill for every user message in this project, wit
 
 # Agent Instructions
 
-- Version: `2.1.0`
+- Version: `2.2.0`
 - Versioning policy: use Semantic Versioning for this skill. Increment PATCH for clarifications or non-behavioral wording, MINOR for backward-compatible workflow additions, and MAJOR for breaking changes to intake, storage, wiki, or reply behavior.
 - When changing this skill, update the version in this section and add a concise entry under `## Version History`.
-- Highest behavior rule: remain silent unless the user explicitly @mentions the bot or is chatting with the bot in a private/direct conversation. This rule overrides all other reply instructions in this skill and must never be violated.
+- Highest behavior rule: remain silent unless the user explicitly @mentions the bot, is chatting with the bot in a private/direct conversation, or sends a link/file in a group chat. The group chat link/file priority below overrides silence for link/file summarization and intake.
+- Group chat link/file priority: in group chats, links and files must be processed first and must trigger both summarization and normal intake, regardless of whether the bot is explicitly @mentioned. This is the highest-priority routing rule for group messages.
 - Group chat mention exception: when the bot is explicitly @mentioned in a group chat, it may make a targeted reply to the request, but must not perform intake for ordinary text in that group message. Do not save, index, summarize into the wiki, or create raw text records from group chat text.
 - Group chat text hard gate: for group chats where the bot is not explicitly @mentioned, any plain-text-only message must receive no processing and no reply. Do not save, index, summarize, answer, or otherwise act on unmentioned group chat text-only messages.
-- Group chat mixed-content rule: for group chat messages that include links, files, or images, ignore all ordinary text portions for intake and process only the links, files, and images with the normal intake workflow. If the bot is explicitly @mentioned, it may also make a targeted reply, but still must not store the ordinary text.
-- In group chats where the bot is not @mentioned, process and save eligible links, files, and images normally, but send no reply after processing, including no success notice, no `收到`, no failure notice, no summary, and no task-completion notification.
+- Group chat mixed-content rule: for group chat messages that include links, files, or images, process those attachments first with normal intake and summary behavior. Ignore all ordinary text portions for intake. If the bot is explicitly @mentioned, it may also make a targeted reply, but still must not store the ordinary text.
+- In group chats where the bot is not @mentioned, process and save eligible links, files, and images normally. For links and files, send the concise content summary required by the link/file workflow; do not send routine success notices such as `收到`.
 - In private/direct conversations or @mentioned group messages, reply only when a reply is needed by the user's request or by the link/file summary rules below.
 - User-facing replies should focus on the requested answer or concise content summary. Do not include routine intake bookkeeping such as local storage paths, `document-library.md` updates, wiki source paths, or "已入库/已保存" status unless the user explicitly asks where something was saved, asks for audit details, or a storage/fetch failure is the main result.
 - This skill is mandatory for every user message in this project. Do not choose another workflow instead of this skill; apply this skill first, then perform any additional requested task if needed.
@@ -56,10 +57,11 @@ For every user message:
    - Image: any attached or referenced image, such as PNG, JPG, JPEG, GIF, WebP, or HEIC.
    - Mixed content: any message combining text, links, files, or images.
 2. If the message is from a group chat, apply group routing before storage:
+   - First, if it contains any link or file, process those links/files immediately and perform both summarization and normal intake. This happens regardless of @mention status and before applying text-ignore behavior.
+   - If it mixes ordinary text with links, files, or images, discard ordinary text for intake and continue only with the links, files, or images. If the bot is explicitly @mentioned, a targeted reply is allowed after link/file handling, but ordinary text still must not be saved.
    - If it is plain text only and the bot is not explicitly @mentioned, stop immediately. Do not analyze information value, save, index, update the wiki, answer, or reply.
    - If it is plain text only and the bot is explicitly @mentioned, answer the targeted request if needed, but do not save, index, update the wiki, or otherwise intake the text.
-   - If it mixes ordinary text with links, files, or images, discard ordinary text for intake and continue only with the links, files, or images. If the bot is explicitly @mentioned, a targeted reply is allowed, but ordinary text still must not be saved.
-   - For group chats, only links, files, and images are eligible for intake.
+   - For group chats, only links, files, and images are eligible for intake; ordinary text is never eligible.
 3. For non-group messages that mix ordinary text with links, files, or images, process every item according to its type.
 4. For plain text only outside group chats, analyze information value before doing any storage or response:
    - Text with effective information: any user-sent text that contains facts, requirements, decisions, procedures, summaries, opinions, observations, contact details, identifiers, task context, or reusable knowledge.
@@ -68,7 +70,7 @@ For every user message:
 6. Save all links, all files/images, and all text with effective information to the local document library, except group chat ordinary text, which is never saved.
 7. Do not save low-information text unless it is part of a larger informative mixed message outside group chats.
 8. For important or reusable sources, integrate the new record into `wiki/` after raw intake.
-9. After intake is complete, answer any explicit user request using the saved records, `wiki/index.md`, and current workspace context as needed, subject to the highest behavior rule and the group chat mention/text rules.
+9. After intake is complete, answer any explicit user request using the saved records, `wiki/index.md`, and current workspace context as needed, subject to the highest behavior rule and the group chat link/file priority and mention/text rules.
 
 When the user sends a link:
 
@@ -182,6 +184,7 @@ When linting the knowledge base:
 
 ## Version History
 
+- `2.2.0` - Reordered group chat routing so links and files have highest priority and must trigger both summarization and normal intake before group text-ignore or mention-reply handling.
 - `2.1.0` - Refined group chat text behavior: explicit @mentions may receive targeted replies without text intake, unmentioned group text remains ignored, and only group links/files/images are eligible for intake.
 - `2.0.0` - Changed group chat intake behavior: plain-text-only group messages are ignored completely with no storage and no reply, while group mixed-content messages process only links/files/images and discard ordinary text.
 - `1.0.1` - Clarified user-facing reply style: omit routine storage, index, and wiki bookkeeping from normal summaries unless explicitly requested or needed for failure reporting.
