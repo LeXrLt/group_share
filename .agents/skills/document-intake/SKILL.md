@@ -5,7 +5,7 @@ description: Mandatory project skill for every user message in this project, wit
 
 # Agent Instructions
 
-- Version: `2.2.0`
+- Version: `2.2.1`
 - Versioning policy: use Semantic Versioning for this skill. Increment PATCH for clarifications or non-behavioral wording, MINOR for backward-compatible workflow additions, and MAJOR for breaking changes to intake, storage, wiki, or reply behavior.
 - When changing this skill, update the version in this section and add a concise entry under `## Version History`.
 - Highest behavior rule: remain silent unless the user explicitly @mentions the bot, is chatting with the bot in a private/direct conversation, or sends a link/file in a group chat. The group chat link/file priority below overrides silence for link/file summarization and intake.
@@ -15,7 +15,8 @@ description: Mandatory project skill for every user message in this project, wit
 - Group chat mixed-content rule: for group chat messages that include links, files, or images, process those attachments first with normal intake and summary behavior. Ignore all ordinary text portions for intake. If the bot is explicitly @mentioned, it may also make a targeted reply, but still must not store the ordinary text.
 - In group chats where the bot is not @mentioned, process and save eligible links, files, and images normally. For links and files, send the concise content summary required by the link/file workflow; do not send routine success notices such as `收到`.
 - In private/direct conversations or @mentioned group messages, reply only when a reply is needed by the user's request or by the link/file summary rules below.
-- User-facing replies should focus on the requested answer or concise content summary. Do not include routine intake bookkeeping such as local storage paths, `document-library.md` updates, wiki source paths, or "已入库/已保存" status unless the user explicitly asks where something was saved, asks for audit details, or a storage/fetch failure is the main result.
+- User-facing replies for links, files, and images must contain only the concise summary or directly requested answer about the content. Do not mention intake, storage, indexing, local paths, `document-library.md`, wiki pages, record IDs, "已入库/已保存", or other bookkeeping unless the user explicitly asks for audit/storage details.
+- If linked or attached content cannot be read, reply only with the content-level limitation needed to explain why no summary is available. Do not mention whether the failed item was saved, indexed, or recorded.
 - This skill is mandatory for every user message in this project. Do not choose another workflow instead of this skill; apply this skill first, then perform any additional requested task if needed.
 - For future messages received in this project conversation, process only the content explicitly sent by the user in this conversation; do not monitor or record external chats in the background.
 - Treat one user message as an intake batch. Process every link and every standalone text segment in that message before replying.
@@ -91,9 +92,9 @@ When the user sends a link:
 4. Save Markdown files under a source-specific folder:
    - `documents/<source-domain>/YYYY-MM-DD_short-title.md`
    - Normalize the domain and filename to lowercase ASCII where practical.
-5. When the highest behavior rule allows a reply, reply with a concise summary of the article or linked content instead of simply saying `收到`.
+5. When the highest behavior rule allows a reply, reply only with a concise summary of the article or linked content instead of simply saying `收到`.
    - Keep the summary brief and useful, usually 1-3 short bullets or 1 short paragraph.
-   - If content could not be fetched, briefly state that the link was saved but the content could not be read, plus the concrete reason when available.
+   - If content could not be fetched, briefly state only that the content could not be read or summarized, plus the concrete reason when available. Do not mention storage, indexing, or intake status.
 6. Keep a root-level document management table in `document-library.md`.
 7. Create `document-library.md` if it does not exist.
 8. For each saved article, append or update one row in `document-library.md` with these metadata fields:
@@ -128,8 +129,8 @@ When the user sends a file or image:
 4. Index the file in `document-library.md` with document type `File`, `Image`, or a more specific type such as `PDF`, `PNG Image`, or `Spreadsheet`.
 5. For important or reusable files/images, create or update a `wiki/sources/` page and any related concept/entity pages.
 6. Update `wiki/index.md` and append an ingest entry to `wiki/log.md`.
-7. When the highest behavior rule allows a reply, reply with a concise summary of the file content instead of simply saying `收到`.
-   - If the file cannot be read, briefly state that it was saved or attempted, and include the concrete limitation when available.
+7. When the highest behavior rule allows a reply, reply only with a concise summary of the file content instead of simply saying `收到`.
+   - If the file cannot be read, briefly state only that the file content could not be read or summarized, plus the concrete limitation when available. Do not mention storage, indexing, or intake status.
 
 When the user sends text instead of a link or file:
 
@@ -184,6 +185,7 @@ When linting the knowledge base:
 
 ## Version History
 
+- `2.2.1` - Tightened user-facing intake replies so link/file/image responses contain only content summaries or content-level read limitations, without storage, indexing, path, or intake bookkeeping details.
 - `2.2.0` - Reordered group chat routing so links and files have highest priority and must trigger both summarization and normal intake before group text-ignore or mention-reply handling.
 - `2.1.0` - Refined group chat text behavior: explicit @mentions may receive targeted replies without text intake, unmentioned group text remains ignored, and only group links/files/images are eligible for intake.
 - `2.0.0` - Changed group chat intake behavior: plain-text-only group messages are ignored completely with no storage and no reply, while group mixed-content messages process only links/files/images and discard ordinary text.
