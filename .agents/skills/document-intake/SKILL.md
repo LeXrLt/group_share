@@ -94,7 +94,8 @@ YouTube 链接以「字幕全文」作为入库文档，不抓取网页正文。
 1. 调用系统 `yt-dlp` 下载字幕，按以下语言优先级取第一个可用的：简体中文（`zh-Hans`/`zh-CN`/`zh`）→ 繁体中文（`zh-Hant`/`zh-TW`/`zh-HK`）→ 英文（`en`）。
    - 先尝试人工字幕（`--write-sub`），无人工字幕再取自动字幕（`--write-auto-sub`）。
    - 只下载字幕、不下载视频，例如：`yt-dlp --skip-download --write-sub --write-auto-sub --sub-langs "zh-Hans,zh-CN,zh,zh-Hant,zh-TW,zh-HK,en" --sub-format "vtt/srt/best" --convert-subs srt -o "<输出路径模板>" <URL>`。
-   - 同时获取视频标题、频道（作者）、视频 URL 等元数据（如 `--print` 或 `--write-info-json`）。
+   - 风控应对：若下载遇到 YouTube 风控（如返回 `Sign in to confirm you're not a bot`、HTTP 429、需要登录等），自动重试并附带浏览器 cookies——优先用 `--cookies-from-browser <browser>`（如 `chrome`、`edge`、`firefox`、`brave`，必要时带 profile，如 `chrome:Default`）；该方式不可用时，回退到导出的 cookies 文件 `--cookies <cookies.txt>`。依次尝试可用的浏览器，直到成功或全部失败。
+   - 同时获取视频标题、频道（作者）、视频 URL 等元数据（如 `--print` 或 `--write-info-json`）；元数据请求若同样受风控，沿用相同的 cookies 参数。
 2. 将下载到的字幕清洗为纯文本（去除时间轴与序号），把完整字幕全文视为一份文档。
 3. 走文档入库流程保存为 Markdown，至少包含：视频标题、来源（频道/作者）、原始 URL、入库时间、所用字幕语言、字幕全文、以及字幕来源说明（人工/自动）。
    - 保存到 `documents/youtube.com/YYYY-MM-DD_short-title.md`。
