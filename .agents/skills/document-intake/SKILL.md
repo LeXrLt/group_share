@@ -1,198 +1,152 @@
 ---
 name: document-intake
-description: Mandatory project skill for every user message in this project, with no optional bypass. Use for any message the user sends, including plain text, low-information text, links, files, images, pasted articles, document-like content, document-library queries, wiki/knowledge-base maintenance requests, daily summary requests, operational instructions, group chat messages, direct messages, and mention-triggered messages, so user-sent information is classified, fetched, evaluated, saved as raw source, indexed, integrated into the maintained wiki, summarized, answered, ignored, or silently processed according to the intake, wiki, and reply rules.
+description: 适用于用户发送的任何消息，包括纯文本、低信息量文本、链接、文件、图片、粘贴的文章、类文档内容、文档库查询、wiki/知识库维护请求、每日摘要请求、操作指令、群聊消息、私聊消息以及被提及触发的消息；据此对用户发送的信息进行分类、抓取、评估、保存为原始来源、建立索引、整合进维护的 wiki、摘要、回答、忽略或静默处理，遵循下文的入库、wiki 与回复规则。
 ---
 
-# Agent Instructions
+# 代理指令
 
-- Version: `2.3.1`
-- Versioning policy: use Semantic Versioning for this skill. Increment PATCH for clarifications or non-behavioral wording, MINOR for backward-compatible workflow additions, and MAJOR for breaking changes to intake, storage, wiki, or reply behavior.
-- When changing this skill, update the version in this section and add a concise entry under `## Version History`.
-- Highest behavior rule: remain silent unless the user explicitly @mentions the bot, is chatting with the bot in a private/direct conversation, or sends a link/file in a group chat. The group chat link/file priority below overrides silence for link/file summarization and intake.
-- Group chat link/file priority: in group chats, links and files must be processed first and must trigger both summarization and normal intake, regardless of whether the bot is explicitly @mentioned. This is the highest-priority routing rule for group messages.
-- Group chat mention exception: when the bot is explicitly @mentioned in a group chat, it may make a targeted reply to the request, but must not perform intake for ordinary text in that group message. Do not save, index, summarize into the wiki, or create raw text records from group chat text.
-- Group chat text hard gate: for group chats where the bot is not explicitly @mentioned, any plain-text-only message must receive no processing and no reply. Do not save, index, summarize, answer, or otherwise act on unmentioned group chat text-only messages.
-- Group chat mixed-content rule: for group chat messages that include links, files, or images, process those attachments first with normal intake and summary behavior. Ignore all ordinary text portions for intake. If the bot is explicitly @mentioned, it may also make a targeted reply, but still must not store the ordinary text.
-- In group chats where the bot is not @mentioned, process and save eligible links, files, and images normally. For links and files, send the concise content summary required by the link/file workflow; do not send routine success notices such as `收到`.
-- In private/direct conversations or @mentioned group messages, reply only when a reply is needed by the user's request or by the link/file summary rules below.
-- User-facing reply template: before sending any user-facing reply that involves document intake, including links, files, images, pasted articles, and document-like content, read and strictly follow `REPLY_TEMPLATE.md` in this directory. The template is the source of truth for final reply shape and overrides looser wording elsewhere in this file.
-- User-facing replies for links, files, and images must contain only the concise summary or directly requested answer about the content. Do not mention intake, storage, indexing, local paths, `document-library.md`, wiki pages, record IDs, "已入库/已保存", or other bookkeeping unless the user explicitly asks for audit/storage details.
-- Do not send user-facing process/progress narration for intake work. Avoid messages like "I will read the rules", "I am fetching the page", "I extracted the HTML", "next I will parse", "now I will write records", or any description of intermediate extraction, parsing, storage, indexing, or wiki-update steps. Perform that work silently and send only the final content summary.
-- If linked or attached content cannot be read, reply only with the content-level limitation needed to explain why no summary is available. Do not mention whether the failed item was saved, indexed, or recorded.
-- This skill is mandatory for every user message in this project. Do not choose another workflow instead of this skill; apply this skill first, then perform any additional requested task if needed.
-- For future messages received in this project conversation, process only the content explicitly sent by the user in this conversation; do not monitor or record external chats in the background.
-- Treat one user message as an intake batch. Process every link and every standalone text segment in that message before replying.
-- Preserve user-sent wording. When saving text that contains effective information, save the original text verbatim; do not rewrite, summarize, translate, or normalize the content body unless the user explicitly asks for a transformed derivative in addition to the raw record.
-- If the filesystem is not writable, a link cannot be fetched, or a file cannot be read after reasonable attempts, record the failure reason when possible. Only notify the user when the highest behavior rule allows a reply.
+## 版本与维护
 
-## Knowledge Base Architecture
+- 版本：`2.4.0`
+- 版本策略：本技能遵循语义化版本（SemVer）。澄清或非行为性措辞调整递增 PATCH；向后兼容的工作流新增递增 MINOR；对入库、存储、wiki 或回复行为的破坏性变更递增 MAJOR。
+- 修改本技能时，更新本节版本号，并在 `## 版本历史` 下追加一条简洁条目。
 
-Maintain the project as a three-layer knowledge base:
+## 核心行为门控（是否回复 / 是否入库）
 
-1. Raw sources: `documents/` plus `document-library.md`.
-   - Treat raw source records as immutable evidence once saved.
-   - Store fetched articles, user text, files, image analyses, and access-failure records here.
-2. Maintained wiki: `wiki/`.
-   - Treat wiki pages as LLM-maintained synthesis artifacts.
-   - Create and update summaries, concept pages, entity pages, reports, comparisons, and indexes as knowledge accumulates.
-   - Use wiki links like `[[concepts/example]]` for cross-references.
-3. Schema and workflow rules: this `SKILL.md`.
-   - Keep this file as the operating contract for intake, wiki updates, query answering, linting, and reply behavior.
+这是消息处理的最高优先级规则，决定“要不要回复”和“要不要入库”。
 
-Use this default wiki layout:
+- 默认静默：除非用户在群聊中显式 @提及本机器人、在私聊中与本机器人对话、或在群聊中发送了链接/文件，否则不回复。
+- 群聊链接/文件最高优先：群聊中的链接和文件必须最先处理，并同时触发“摘要 + 正常入库”，无论是否被 @提及；此规则优先于下方所有群聊文本忽略规则。
+- 群聊普通文本（未被 @）：完全不处理——不保存、不索引、不摘要、不回答、不回复。
+- 群聊普通文本（被 @）：可对请求做针对性回复，但不得对普通文本入库（不保存、不索引、不整合进 wiki、不创建原始文本记录）。
+- 群聊混合内容：先按正常入库与摘要流程处理其中的链接、文件、图片，忽略全部普通文本部分不予入库；若被 @提及可额外做针对性回复，但仍不得保存普通文本。
 
-- `wiki/home.md`: entry point and high-level orientation.
-- `wiki/index.md`: content-oriented catalog of wiki pages with one-line descriptions.
-- `wiki/log.md`: append-only chronological log. Start entries with `## [YYYY-MM-DD] operation | title`.
-- `wiki/sources/`: one source-summary page per important ingested source.
-- `wiki/concepts/`: reusable topic and concept pages.
-- `wiki/entities/`: people, organizations, products, places, projects, and other named entities.
-- `wiki/reports/`: durable analyses, comparisons, daily/weekly summaries, and query results worth preserving.
+## 回复规则
 
-## Document Intake Workflow
+- 私聊或被 @提及的群聊消息：仅在用户请求需要、或下方链接/文件摘要规则要求时才回复。
+- 回复模板：任何涉及文档入库的对用户回复（链接、文件、图片、粘贴文章、类文档内容）发送前，必须阅读并严格遵循本目录下的 `REPLY_TEMPLATE.md`；该模板是最终回复形态的唯一权威，覆盖本文件中较宽松的措辞。
+- 不输出过程/进度旁白（例如“我去读规则”“正在抓取页面”“已提取 HTML”“接下来解析”“现在写记录”等中间步骤描述）；这些工作静默完成，只发送最终内容摘要。
+- 当内容无法读取时，只说明内容层面的不可读原因，不提及失败项是否被保存、索引或记录。
 
-For every user message:
+## 知识库架构
 
-1. First classify the message and each item in it as one or more of:
-   - Plain text only.
-   - Link: any URL or URL-like text.
-   - File: any attached or referenced file with a filename or detectable type, such as PDF, DOCX, XLSX, TXT, ZIP, audio, or video.
-   - Image: any attached or referenced image, such as PNG, JPG, JPEG, GIF, WebP, or HEIC.
-   - Mixed content: any message combining text, links, files, or images.
-2. If the message is from a group chat, apply group routing before storage:
-   - First, if it contains any link or file, process those links/files immediately and perform both summarization and normal intake. This happens regardless of @mention status and before applying text-ignore behavior.
-   - If it mixes ordinary text with links, files, or images, discard ordinary text for intake and continue only with the links, files, or images. If the bot is explicitly @mentioned, a targeted reply is allowed after link/file handling, but ordinary text still must not be saved.
-   - If it is plain text only and the bot is not explicitly @mentioned, stop immediately. Do not analyze information value, save, index, update the wiki, answer, or reply.
-   - If it is plain text only and the bot is explicitly @mentioned, answer the targeted request if needed, but do not save, index, update the wiki, or otherwise intake the text.
-   - For group chats, only links, files, and images are eligible for intake; ordinary text is never eligible.
-3. For non-group messages that mix ordinary text with links, files, or images, process every item according to its type.
-4. For plain text only outside group chats, analyze information value before doing any storage or response:
-   - Text with effective information: any user-sent text that contains facts, requirements, decisions, procedures, summaries, opinions, observations, contact details, identifiers, task context, or reusable knowledge.
-   - Low-information text: simple greetings, acknowledgements, meaningless text, standalone words or phrases, fillers, emojis, or text with no reusable information beyond the immediate interaction.
-5. For low-information plain text, do nothing: do not save, do not index, and do not reply unless the user explicitly asked a meaningful question and the highest behavior rule allows a reply.
-6. Save all links, all files/images, and all text with effective information to the local document library, except group chat ordinary text, which is never saved.
-7. Do not save low-information text unless it is part of a larger informative mixed message outside group chats.
-8. For important or reusable sources, integrate the new record into `wiki/` after raw intake.
-9. After intake is complete, answer any explicit user request using the saved records, `wiki/index.md`, and current workspace context as needed, subject to the highest behavior rule and the group chat link/file priority and mention/text rules.
+将项目维护为三层知识库：
 
-When the user sends a link:
+1. 原始来源：`documents/` 加 `document-library.md`。
+   - 原始来源记录一经保存即视为不可变证据。
+   - 在此存储抓取的文章、用户文本、文件、图片分析以及访问失败记录。
+2. 维护的 wiki：`wiki/`。
+   - wiki 页面视为由 LLM 维护的综合产物。
+   - 随知识积累创建并更新摘要、概念页、实体页、报告、对比与索引。
+   - 用 `[[concepts/example]]` 形式的 wiki 链接做交叉引用。
+3. 模式与工作流规则：本 `SKILL.md`。
+   - 本文件是入库、wiki 更新、查询应答、巡检与回复行为的操作契约。
 
-1. Identify the article source by the URL domain.
-   - Examples: `mp.weixin.qq.com` is WeChat Official Account; `zhuanlan.zhihu.com` is Zhihu Column; `36kr.com` is 36Kr; `juejin.cn` is Juejin; `sspai.com` is SSPAI.
-   - For unknown domains, use the registrable domain as the source name.
-2. Fetch the page content. A link is not sufficiently processed until the content pointed to by the link has been retrieved or a concrete retrieval failure has been recorded.
-   - Use the available browser, shell, HTTP, or site-specific extraction methods needed for the domain.
-   - For article pages, extract the readable article body rather than saving only metadata or the URL.
-   - For WeChat Official Account links, attempt browser access and direct HTTP retrieval with a realistic user agent; extract title, publisher, description, and readable body from the returned HTML/JavaScript when possible.
-3. Extract and save the article content as Markdown, including at least:
-   - Title
-   - Source domain and inferred source name
-   - Original URL
-   - Intake time
-   - Main article body or the best available readable content
-   - Notes about fetch or extraction limitations, if any
-4. Save Markdown files under a source-specific folder:
-   - `documents/<source-domain>/YYYY-MM-DD_short-title.md`
-   - Normalize the domain and filename to lowercase ASCII where practical.
-5. When the highest behavior rule allows a reply, reply strictly according to `REPLY_TEMPLATE.md` with only the final concise summary of the article or linked content instead of simply saying `收到`.
-   - Do not add labels or prefixes such as `这条 X 的核心观点：`; output only the summary content that would come after the colon.
-   - If content could not be fetched, briefly state only that the content could not be read or summarized, plus the concrete reason when available. Do not mention storage, indexing, or intake status.
-6. Keep a root-level document management table in `document-library.md`.
-7. Create `document-library.md` if it does not exist.
-8. For each saved article, append or update one row in `document-library.md` with these metadata fields:
-   - Record ID
-   - Sender
-   - Intake time
-   - Source domain
-   - Source name
-   - Document type
-   - Title or short description
-   - Original URL
-   - Local storage path
-   - Tags
-   - Summary status
-   - Notes
-9. If title, author, or other metadata is unavailable, infer conservatively and mark unknown values as `Unknown`.
-10. For important or reusable linked content, create or update `wiki/sources/YYYY-MM-DD_short-title.md` with a concise source summary, key ideas, source ID, source path, source URL, tags, and links to related wiki pages.
-11. Update relevant `wiki/concepts/`, `wiki/entities/`, or `wiki/reports/` pages when the source changes or strengthens durable knowledge.
-12. Update `wiki/index.md` and append an ingest entry to `wiki/log.md`.
+默认 wiki 布局：
 
-When the user sends a file or image:
+- `wiki/home.md`：入口与高层导览。
+- `wiki/index.md`：面向内容的 wiki 页面目录，含一句话描述。
+- `wiki/log.md`：仅追加的时间线日志，条目以 `## [YYYY-MM-DD] 操作 | 标题` 开头。
+- `wiki/sources/`：每个重要来源一个来源摘要页。
+- `wiki/concepts/`：可复用的主题与概念页。
+- `wiki/entities/`：人物、组织、产品、地点、项目等命名实体。
+- `wiki/reports/`：持久的分析、对比、每日/每周摘要与值得保留的查询结果。
 
-1. Detect the file type from the filename extension when available; otherwise infer from MIME type or content.
-2. Save the original file or the best available extracted representation under an extension-specific folder:
-   - `documents/<extension>/YYYY-MM-DD_short-description.<extension>` for original files.
-   - `documents/<extension>/YYYY-MM-DD_short-description.md` for extracted text, OCR, metadata, or summaries.
-   - Normalize extension names to lowercase without a leading dot, such as `pdf`, `png`, `jpg`, `docx`, `xlsx`, `txt`, or `unknown`.
-3. Extract readable content when practical:
-   - PDFs and office documents: extract text and key metadata.
-   - Images: run OCR or visual inspection when available; record image dimensions, visible text, and salient content.
-   - Other file types: extract metadata or a conservative description when full parsing is not available.
-4. Index the file in `document-library.md` with document type `File`, `Image`, or a more specific type such as `PDF`, `PNG Image`, or `Spreadsheet`.
-5. For important or reusable files/images, create or update a `wiki/sources/` page and any related concept/entity pages.
-6. Update `wiki/index.md` and append an ingest entry to `wiki/log.md`.
-7. When the highest behavior rule allows a reply, reply strictly according to `REPLY_TEMPLATE.md` with only the final concise summary of the file or image content instead of simply saying `收到`.
-   - If the file cannot be read, briefly state only that the file content could not be read or summarized, plus the concrete limitation when available. Do not mention storage, indexing, or intake status.
+## 入库工作流
 
-When the user sends text instead of a link or file:
+对每条用户消息：
 
-1. If the text is from a group chat and the bot is explicitly @mentioned, make a targeted reply if needed, but do not save, index, summarize into the wiki, or otherwise intake the text.
-2. If the text is from a group chat and the bot is not explicitly @mentioned, do nothing. Do not save, index, summarize, answer, or reply.
-3. Outside group chats, analyze whether the text contains effective information using the classification rules above.
-4. If it is low-information plain text, do nothing.
-5. If it contains effective information:
-   - Save the original user text verbatim under `documents/text/YYYY-MM-DD_short-description.md` and index it in `document-library.md`.
-   - Use document type `User Text` unless a more specific type is obvious, such as `Pasted Article`, `Instruction`, `Note`, or `Conversation Context`.
-   - If the message mixes an operational instruction with reusable information, save the reusable original text first, then carry out the operation.
-6. When the highest behavior rule allows a reply and no link/file summary or explicit answer is required, keep the response minimal.
+1. 分类：将消息及其中每一项归为以下一种或多种——
+   - 纯文本：不包含任何链接、文件或图片的文本。
+   - 链接：任何 URL 或类 URL 文本。
+   - 文件：任何带文件名或可识别类型的附件或被引用文件，如 PDF、DOCX、XLSX、TXT、ZIP、音频、视频。
+   - 图片：任何附带或被引用的图片，如 PNG、JPG、JPEG、GIF、WebP、HEIC。
+   - 混合内容：组合了文本、链接、文件或图片的消息。
+2. 群聊消息先按“核心行为门控”做路由，再决定是否存储与回复。
+3. 非群聊的混合消息：按各项类型分别处理每一项。
+4. 保存所有链接、所有文件/图片。
+5. 对重要或可复用的来源，原始入库后按“Wiki 操作”将新记录整合进 `wiki/`。
+6. 纯文本内容一律不保存。
+7. 入库完成后，按照回复规则进行回复。
 
-When the user asks to query content or produce a daily document summary report, read `wiki/index.md` first, then use `document-library.md` and linked local records as needed for source-level detail.
+### 链接
 
-## Wiki Operations
+1. 按 URL 域名识别来源。
+   - 例：`mp.weixin.qq.com` 为微信公众号；`zhuanlan.zhihu.com` 为知乎专栏；`36kr.com` 为 36 氪；`juejin.cn` 为掘金；`sspai.com` 为少数派。
+   - 未知域名用可注册域名作为来源名。
+2. 抓取页面内容：链接必须取到其指向的内容，或记录一个具体的抓取失败，才算处理完成。
+   - 按域名需要使用可用的浏览器、shell、HTTP 或站点专用提取方法。
+   - 文章页提取可读正文，而非仅保存元数据或 URL。
+   - 微信公众号链接：尝试浏览器访问与带真实 User-Agent 的直接 HTTP 抓取，尽量从返回的 HTML/JavaScript 中提取标题、发布者、描述与可读正文。
+3. 将文章内容提取并保存为 Markdown，至少包含：标题、来源域名与推断来源名、原始 URL、入库时间、正文或最佳可读内容、抓取/提取限制说明（如有）。
+4. 保存到来源专属目录：`documents/<source-domain>/YYYY-MM-DD_short-title.md`；尽量将域名与文件名规范化为小写 ASCII。
+5. 在 `document-library.md` 中追加或更新一行（不存在则创建该文件），字段包括：记录 ID、发送者、入库时间、来源域名、来源名、文档类型、标题或简述、原始 URL、本地存储路径、标签、摘要状态、备注。
+6. 标题、作者或其他元数据缺失时保守推断，未知值标记为 `Unknown`。
+7. 对重要或可复用的链接内容，按“Wiki 操作”整合进 wiki。
 
-When ingesting an important source:
+### 文件与图片
 
-1. Read the saved raw record from `documents/`.
-2. Create or update a source summary page in `wiki/sources/`.
-3. Identify durable concepts, entities, decisions, contradictions, and useful facts.
-4. Update existing wiki pages before creating duplicate pages.
-5. Create new concept/entity/report pages when the idea is likely to recur.
-6. Add source IDs and local source paths in frontmatter or body references.
-7. Update `wiki/index.md`.
-8. Append an entry to `wiki/log.md`.
+1. 优先用文件名扩展名判断类型；否则按 MIME 类型或内容推断。
+2. 保存原文件或最佳可提取表示：
+   - 原文件：`documents/<extension>/YYYY-MM-DD_short-description.<extension>`。
+   - 提取的文本、OCR、元数据或摘要：`documents/<extension>/YYYY-MM-DD_short-description.md`。
+   - 扩展名规范化为不带点的小写，如 `pdf`、`png`、`jpg`、`docx`、`xlsx`、`txt` 或 `unknown`。
+3. 尽量提取可读内容：PDF 与办公文档提取文本与关键元数据；图片在可用时做 OCR 或视觉检查，记录尺寸、可见文字与显著内容；其他类型在无法完整解析时提取元数据或保守描述。
+4. 在 `document-library.md` 中建立索引，文档类型用 `File`、`Image` 或更具体类型如 `PDF`、`PNG Image`、`Spreadsheet`。
+5. 对重要或可复用的文件/图片，按“Wiki 操作”整合进 wiki。
 
-When answering a knowledge-base query:
 
-1. Read `wiki/index.md` first.
-2. Open the most relevant wiki pages.
-3. Use `document-library.md` and raw `documents/` only when needed for evidence, missing detail, or source verification.
-4. Answer from the maintained wiki when possible, with local file citations when useful.
-5. If the answer creates reusable analysis, save it under `wiki/reports/` or merge it into an existing concept/entity page, then update `wiki/index.md` and `wiki/log.md`.
+## Wiki 操作
 
-When producing daily or periodic summaries:
+整合重要来源时：
 
-1. Filter `document-library.md` by intake date.
-2. Read each local source record for that date.
-3. Summarize by theme, not only by source order.
-4. Optionally create a durable report under `wiki/reports/YYYY-MM-DD_daily-summary.md` when the summary has future value.
-5. Update `wiki/index.md` and `wiki/log.md` if a report is created.
+1. 读取 `documents/` 中已保存的原始记录。
+2. 在 `wiki/sources/` 创建或更新来源摘要页（含关键观点、来源 ID、来源路径、来源 URL、标签及到相关 wiki 页的链接）。
+3. 识别持久的概念、实体、决策、矛盾与有用事实。
+4. 优先更新已有 wiki 页，避免创建重复页；当某想法可能反复出现时，再创建新的概念/实体/报告页。
+5. 当来源改变或强化持久知识时，更新相关 `wiki/concepts/`、`wiki/entities/` 或 `wiki/reports/` 页。
+6. 在 frontmatter 或正文引用中记录来源 ID 与本地来源路径。
+7. 更新 `wiki/index.md`，并向 `wiki/log.md` 追加一条入库记录。
 
-When linting the knowledge base:
+## 查询与摘要
 
-1. Check `wiki/index.md` for missing or stale page listings.
-2. Check `wiki/log.md` for recent operations and parseable headings.
-3. Find orphan wiki pages with no obvious inbound links.
-4. Look for contradictions, stale claims, duplicated concepts, missing source IDs, and uncited durable claims.
-5. Suggest new sources or questions where gaps are clear.
+当用户请求查询内容或生成每日文档摘要报告时，先读 `wiki/index.md`，再按需使用 `document-library.md` 与关联的本地记录获取来源级细节。
 
-## Version History
+回答知识库查询时：
 
-- `2.3.1` - Tightened `REPLY_TEMPLATE.md` so intake replies output only the summary body after any would-be label or colon, with no source/type prefix such as `这条 X 的核心观点：`.
-- `2.3.0` - Added mandatory `REPLY_TEMPLATE.md` enforcement for all user-facing document-intake replies so summaries follow one strict concise format and omit operational status text.
-- `2.2.2` - Prohibited user-facing intake progress narration; link/file/image replies should silently do intake work and return only the final core content summary or content-level read limitation.
-- `2.2.1` - Tightened user-facing intake replies so link/file/image responses contain only content summaries or content-level read limitations, without storage, indexing, path, or intake bookkeeping details.
-- `2.2.0` - Reordered group chat routing so links and files have highest priority and must trigger both summarization and normal intake before group text-ignore or mention-reply handling.
-- `2.1.0` - Refined group chat text behavior: explicit @mentions may receive targeted replies without text intake, unmentioned group text remains ignored, and only group links/files/images are eligible for intake.
-- `2.0.0` - Changed group chat intake behavior: plain-text-only group messages are ignored completely with no storage and no reply, while group mixed-content messages process only links/files/images and discard ordinary text.
-- `1.0.1` - Clarified user-facing reply style: omit routine storage, index, and wiki bookkeeping from normal summaries unless explicitly requested or needed for failure reporting.
-- `1.0.0` - Baseline version for mandatory message intake, reply constraints, raw document storage, local indexing, file/image handling, and maintained wiki workflows.
+1. 先读 `wiki/index.md`。
+2. 打开最相关的 wiki 页。
+3. 仅在需要证据、补充细节或核验来源时，才使用 `document-library.md` 与原始 `documents/`。
+4. 尽量基于维护的 wiki 作答，必要时附本地文件引用。
+5. 若答案产生可复用分析，将其保存到 `wiki/reports/` 或并入已有概念/实体页，然后更新 `wiki/index.md` 与 `wiki/log.md`。
+
+生成每日或周期摘要时：
+
+1. 按入库日期过滤 `document-library.md`。
+2. 读取该日期每条本地来源记录。
+3. 按主题而非仅按来源顺序归纳。
+4. 当摘要有未来价值时，可在 `wiki/reports/YYYY-MM-DD_daily-summary.md` 创建持久报告。
+5. 若创建了报告，更新 `wiki/index.md` 与 `wiki/log.md`。
+
+## 知识库巡检
+
+巡检知识库时：
+
+1. 检查 `wiki/index.md` 是否有缺失或过时的页面列项。
+2. 检查 `wiki/log.md` 的近期操作与可解析标题。
+3. 查找无明显入链的孤立 wiki 页。
+4. 排查矛盾、过时论断、重复概念、缺失来源 ID 与未引用的持久论断。
+5. 在明显存在缺口处，建议新的来源或问题。
+
+## 版本历史
+
+- `2.4.0` - 全文中文重构：合并分散重复的群聊路由与回复规则为统一的“核心行为门控”与“回复规则”两节，将各类型工作流中重复的 wiki 更新步骤统一指向“Wiki 操作”，行为保持不变。
+- `2.3.1` - 收紧 `REPLY_TEMPLATE.md`，使入库回复只输出标签或冒号之后的摘要正文，不带来源/类型前缀（如 `这条 X 的核心观点：`）。
+- `2.3.0` - 为所有面向用户的文档入库回复强制使用 `REPLY_TEMPLATE.md`，使摘要遵循统一的简洁格式并省略操作状态文本。
+- `2.2.2` - 禁止面向用户的入库进度旁白；链接/文件/图片回复应静默完成入库并只返回最终核心内容摘要或内容层面的读取限制。
+- `2.2.1` - 收紧面向用户的入库回复，使链接/文件/图片响应只含内容摘要或内容层面的读取限制，不含存储、索引、路径或入库记账细节。
+- `2.2.0` - 重排群聊路由，使链接与文件具最高优先级，必须先触发摘要与正常入库，再处理群聊文本忽略或被 @回复。
+- `2.1.0` - 细化群聊文本行为：被显式 @可做针对性回复而不入库文本，未被 @的群聊文本继续忽略，群聊中仅链接/文件/图片可入库。
+- `2.0.0` - 变更群聊入库行为：纯文本群聊消息完全忽略，不存储也不回复；群聊混合内容仅处理链接/文件/图片并丢弃普通文本。
+- `1.0.1` - 澄清面向用户的回复风格：常规摘要省略例行的存储、索引与 wiki 记账，除非显式要求或用于失败报告。
+- `1.0.0` - 强制消息入库、回复约束、原始文档存储、本地索引、文件/图片处理与维护 wiki 工作流的基线版本。

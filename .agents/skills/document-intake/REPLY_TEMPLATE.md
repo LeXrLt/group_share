@@ -1,40 +1,40 @@
-# Document Intake Reply Template
+# 文档入库回复模板
 
-Use this template for every user-facing reply that involves document intake, including links, files, images, pasted articles, and document-like content.
+涉及链接、文件、图片等文档内容的回复，严格按本模板输出，且只输出本模板的三部分，不加任何开场白、过程旁白或入库/存储/索引等记账信息。
 
-## Hard Rules
+## 固定结构
 
-- Reply with the content summary only.
-- Output only the text that would appear after labels such as `这条 X 的核心观点：`, `这个文件的核心内容：`, or `这张图片的核心内容：`.
-- Do not include source/type labels, prefixes, colons, section names, or wrapper phrases.
-- Do not describe intake, storage, indexing, wiki updates, local files, parsing, fetching, OCR, extraction, or any intermediate step.
-- Do not say `已保存`, `已入库`, `已记录`, `已更新`, `已处理`, `收到`, or similar operational status text.
-- Keep the reply to one short paragraph with at most two sentences, unless the user explicitly asks for a longer or structured answer.
-- Do not add a heading unless the user explicitly asks for a structured format.
-
-## Templates
-
-For articles, webpages, and social posts:
+按以下顺序输出三部分，标题与顺序固定不变：
 
 ```text
-{用1到2句话概括内容本身。必要时第二句话只写关键前提、风险或注意点。}
+## 内容摘要
+
+{用 1 到 3 句话概括文章内容本身。}
+
+## 核心论点
+
+| 序号 | 核心论点 | 说明 |
+| --- | --- | --- |
+| 1 | {论点一} | {对应依据或展开} |
+| 2 | {论点二} | {对应依据或展开} |
+| 3 | {论点三} | {对应依据或展开} |
+
+## 总结
+
+{用 1 到 2 句话给出整体总结或结论。}
 ```
 
-Do not write prefixes like `这条 X 的核心观点：`, `这篇文章主要讲：`, or `这个链接的核心内容：`.
+## 硬性规则
 
-For files:
+- 只输出上述三部分，不增删小节，不加其他文字。
+- 核心论点逐行对应一个论点，按内容多少列 2 到 6 行，不硬凑。
+- 表格只填来自文章本身的内容，不编造、不引申无依据的结论。
+- 不描述入库、存储、索引、wiki 更新、本地路径、解析、抓取、OCR 等任何中间步骤。
+- 不说 `已保存`、`已入库`、`已记录`、`已处理`、`收到` 等操作状态文本。
 
-```text
-{用1到2句话概括文件内容本身。必要时第二句话只写关键结论、风险或注意点。}
-```
+## 内容无法读取时
 
-For images:
-
-```text
-{用1到2句话概括图片内容本身。必要时第二句话只写可见文字、关键细节或注意点。}
-```
-
-When content cannot be read:
+只输出一行，不套用三段结构：
 
 ```text
 内容暂时无法总结：{只写内容层面的不可读原因。}
